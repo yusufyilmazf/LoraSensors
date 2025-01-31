@@ -9,8 +9,8 @@
 #define dio0 2            // LoRa DIO0 pin
 
 // WiFi Bilgileri
-const char* ssid = "Sabzora";
-const char* password = "Ane1r!2518";
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
 // Web sunucusu oluşturuluyor
 AsyncWebServer server(80);
