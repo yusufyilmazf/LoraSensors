@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRa Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .card {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px;
+            display: inline-block;
+            width: 45%;
+        }
+        .data-label {
+            font-size: 16px;
+            color: #555;
+        }
+        .data-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #222;
+        }
+        .chart-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">📡 LoRa Sensör Dashboard</h1>
+
+        <div class="card">
+            <p class="data-label">🌱 Toprak Nemi</p>
+            <p id="soilMoisture" class="data-value">Veri bekleniyor...</p>
+        </div>
+        <div class="card">
+            <p class="data-label">🔴 PIR Sensör</p>
+            <p id="pirStatus" class="data-value">Veri bekleniyor...</p>
+        </div>
+        <div class="card">
+            <p class="data-label">🌡 Sıcaklık</p>
+            <p id="temperature" class="data-value">Veri bekleniyor...</p>
+        </div>
+        <div class="card">
+            <p class="data-label">💧 Nem</p>
+            <p id="humidity" class="data-value">Veri bekleniyor...</p>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="sensorChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chartData = {
+            labels: [],
+            datasets: [
+                { label: "🌱 Toprak Nemi (%)", data: [], borderColor: "blue", fill: false },
+                { label: "🌡 Sıcaklık (°C)", data: [], borderColor: "red", fill: false },
+                { label: "💧 Nem (%)", data: [], borderColor: "green", fill: false }
+            ]
+        };
+
+        let ctx = document.getElementById('sensorChart').getContext('2d');
+        let sensorChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: "Zaman" } },
+                    y: { title: { display: true, text: "Ölçüm Değerleri" } }
+                }
+            }
+        });
+
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("soilMoisture").innerText = data.soilMoisture + "%";
+                    document.getElementById("pirStatus").innerText = data.pirStatus == "1" ? "Hareket Var" : "Hareket Yok";
+
+                    // Sıcaklık ve nem verisini parse et
+                    let tempHumidityString = data.tempHumidityData; // Örn: "T:22.60C H:28.00%"
+                    let tempMatch = tempHumidityString.match(/T:(\d+\.\d+)C/); // Sıcaklık regex
+                    let humidityMatch = tempHumidityString.match(/H:(\d+\.\d+)%/); // Nem regex
+
+                    let temperature = tempMatch ? tempMatch[1] : "Veri Yok";
+                    let humidity = humidityMatch ? humidityMatch[1] : "Veri Yok";
+
+                    document.getElementById("temperature").innerText = temperature + "°C";
+                    document.getElementById("humidity").innerText = humidity + "%";
+
+                    // Verileri grafiğe ekleyelim
+                    let now = new Date().toLocaleTimeString();
+                    chartData.labels.push(now);
+                    chartData.datasets[0].data.push(data.soilMoisture);
+                    chartData.datasets[1].data.push(temperature);
+                    chartData.datasets[2].data.push(humidity);
+
+                    // Veri sınırını 10 ile kısıtla
+                    if (chartData.labels.length > 10) {
+                        chartData.labels.shift();
+                        chartData.datasets[0].data.shift();
+                        chartData.datasets[1].data.shift();
+                        chartData.datasets[2].data.shift();
+                    }
+
+                    sensorChart.update();
+                })
+                .catch(error => console.log("Veri alınamadı!", error));
+        }
+
+        setInterval(fetchData, 5000);
+        fetchData();
+    </script>
+</body>
+</html>
